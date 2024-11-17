@@ -19,7 +19,13 @@ class SessionRecordsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Session Records')),
+      appBar: AppBar(
+        title: Text(
+          'Session Records',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.deepPurple,
+      ),
       body: FutureBuilder<Map<String, int>>(
         future: _loadSessions(),
         builder: (context, snapshot) {
@@ -27,20 +33,51 @@ class SessionRecordsScreen extends StatelessWidget {
             return Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No session data found.'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, size: 80, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No session data found.',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
           }
 
           Map<String, int> sessions = snapshot.data!;
-          List<String> sortedDates = sessions.keys.toList()..sort();
+          List<String> sortedDates = sessions.keys.toList()..sort((a, b) => b.compareTo(a)); // Sort in descending order
 
           return ListView.builder(
+            padding: EdgeInsets.all(16),
             itemCount: sortedDates.length,
             itemBuilder: (context, index) {
               String date = sortedDates[index];
               int seconds = sessions[date]!;
-              return ListTile(
-                title: Text(date),
-                subtitle: Text('Total: ${_formatTime(seconds)}'),
+
+              return Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: EdgeInsets.only(bottom: 16),
+                elevation: 4,
+                child: ListTile(
+                  contentPadding: EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.deepPurple,
+                    child: Icon(Icons.timer, color: Colors.white),
+                  ),
+                  title: Text(
+                    date,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    'Total: ${_formatTime(seconds)}',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: Colors.deepPurple),
+                ),
               );
             },
           );
