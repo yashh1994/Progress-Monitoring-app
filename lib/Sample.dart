@@ -76,7 +76,7 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
   void _updateDailyProgress() {
     String today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
     Map<String, int> dailySessions = _getStoredSessions();
-    dailySessions[today] = (dailySessions[today] ?? 0) + sessionTime;
+    dailySessions[today] = sessionTime;
     prefs.setString('sessions', jsonEncode(dailySessions));
   }
 
@@ -87,8 +87,10 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
   }
 
   Future<void> _loadSessionState() async {
+    var daily = _getStoredSessions();
     isSessionActive = prefs.getBool('isSessionActive') ?? false;
-    sessionTime = prefs.getInt('sessionTime') ?? 0;
+    // sessionTime = prefs.getInt('sessionTime') ?? 0;
+    sessionTime = daily[DateTime.now().toIso8601String().split('T')[0]] ?? 0;
     int? lastSavedTime = prefs.getInt('lastSavedTime');
     if (isSessionActive && lastSavedTime != null) {
       int currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -99,8 +101,10 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
   }
 
   Future<void> _saveSessionState() async {
+    var daily = await _getStoredSessions();
     await prefs.setBool('isSessionActive', isSessionActive);
     await prefs.setInt('sessionTime', sessionTime);
+    daily[DateTime.now().toIso8601String().split('T')[0]] = sessionTime;
     if (isSessionActive) {
       await prefs.setInt(
           'lastSavedTime', DateTime.now().millisecondsSinceEpoch ~/ 1000);
@@ -146,7 +150,9 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: isSessionActive ? [Colors.green, Colors.greenAccent] : [Colors.deepPurple, Colors.purpleAccent],
+              colors: isSessionActive
+                  ? [Colors.green, Colors.greenAccent]
+                  : [Colors.deepPurple, Colors.purpleAccent],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
