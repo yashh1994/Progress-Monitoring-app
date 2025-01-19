@@ -12,7 +12,6 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
   late SharedPreferences prefs;
   bool isSessionActive = false;
   int sessionTime = 0;
-  int? sessionStartTime;
   late Timer timer;
 
   @override
@@ -38,7 +37,6 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
   }
 
   void _startSession() {
-    sessionStartTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     isSessionActive = true;
     _saveSessionState();
     _startTimer();
@@ -46,7 +44,6 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
 
   void _stopSession() {
     //_addElapsedTime();
-    _updateDailyProgress();
     isSessionActive = false;
     _saveSessionState();
     timer.cancel();
@@ -57,6 +54,7 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
       setState(() {
         if (isSessionActive) {
           sessionTime++;
+          _updateLastSavedTime();
         } else {
           timer.cancel();
         }
@@ -64,20 +62,35 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
     });
   }
 
-  void _addElapsedTime() {
-    if (isSessionActive && sessionStartTime != null) {
-      int currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      //sessionTime += (currentTime - sessionStartTime!);
-      sessionStartTime = null;
-      _updateDailyProgress();
+  void _updateLastSavedTime() async {
+    if (isSessionActive) {
+      await prefs.setInt(
+          'lastSavedTime', DateTime.now().millisecondsSinceEpoch ~/ 1000);
     }
   }
+
+  // void _addElapsedTime() {
+  //   if (isSessionActive && sessionStartTime != null) {
+  //     int currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  //     //sessionTime += (currentTime - sessionStartTime!);
+  //     _updateDailyProgress();
+  //   }
+  // }
 
   void _updateDailyProgress() {
     String today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
     Map<String, int> dailySessions = _getStoredSessions();
     dailySessions[today] = sessionTime;
     prefs.setString('sessions', jsonEncode(dailySessions));
+  }
+
+  Future<void> _saveSessionState() async {
+    await prefs.setBool('isSessionActive', isSessionActive);
+    if (isSessionActive) {
+      await prefs.setInt(
+          'lastSavedTime', DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    }
+    _updateDailyProgress(); // Use this to handle daily session updates
   }
 
   Map<String, int> _getStoredSessions() {
@@ -100,17 +113,6 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
     setState(() {});
   }
 
-  Future<void> _saveSessionState() async {
-    var daily = await _getStoredSessions();
-    await prefs.setBool('isSessionActive', isSessionActive);
-    await prefs.setInt('sessionTime', sessionTime);
-    daily[DateTime.now().toIso8601String().split('T')[0]] = sessionTime;
-    if (isSessionActive) {
-      await prefs.setInt(
-          'lastSavedTime', DateTime.now().millisecondsSinceEpoch ~/ 1000);
-    }
-  }
-
   String _formatTime(int seconds) {
     int hours = seconds ~/ 3600;
     int minutes = (seconds % 3600) ~/ 60;
@@ -121,7 +123,6 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
   @override
   void dispose() {
     timer.cancel();
-    _addElapsedTime();
     _saveSessionState();
     super.dispose();
   }
@@ -129,7 +130,6 @@ class _TimeTrackerState extends State<TimeTracker> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _addElapsedTime();
       _saveSessionState();
     }
   }
